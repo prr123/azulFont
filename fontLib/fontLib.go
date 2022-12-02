@@ -13,9 +13,16 @@ package fontLib
 import (
 	"os"
 	"fmt"
+	"encoding/binary"
 )
 
 type tableType uint32
+
+type fileHeader struct {
+	Filetype  uint32
+	TablesNum uint16
+	// 3 uint16 ignored
+}
 
 const (
 	invalid =iota
@@ -77,12 +84,18 @@ const (
 	Zapf
 )
 
+const (
+	headerSize     = 4 + 4*2
+	tableEntrySize = 4 * 4
+)
+
 type fontObj struct {
 	FontName string
 	FontType string
 	Size float32
 	ttfFil *os.File
 	tab [48]string
+	Buf *[]byte
 }
 
 
@@ -172,6 +185,50 @@ func GetFont(fontNam string)(font *fontObj, err error) {
 	ttfFil, err := os.Open(fontLib + fontNam)
 	if err !=nil {return nil, fmt.Errorf("openFile %v", err)}
 	defer ttfFil.Close()
+
+	info, err := ttfFil.Stat()
+	if err != nil {return nil, fmt.Errorf("Stat: %v",err)}
+	size := info.Size()
+	fmt.Println("size: ",size)
+	buf := make([]byte, size)
+
+	_, err = ttfFil.Read(buf)
+	if err != nil {return nil, fmt.Errorf("read: %v", err)}
+
+	for i:=0; i< 20; i++ {
+		fmt.Printf("%d: %d %q|", i, buf[i], buf[i])
+	}
+	fmt.Println()
+
+	fontobj.Buf = &buf
+
+	slice := buf[:4]
+	tver := binary.BigEndian.Uint32(slice)
+	fmt.Printf("scalar: %d\n", tver)
+
+	slice = buf[4:6]
+	numTbl := binary.BigEndian.Uint16(slice)
+	fmt.Printf("tables: %d\n", numTbl)
+
+	slice = buf[6:8]
+	sr := binary.BigEndian.Uint16(slice)
+	fmt.Printf("searchRange: %d\n", sr)
+
+	slice = buf[8:10]
+	es := binary.BigEndian.Uint16(slice)
+	fmt.Printf("entrySel: %d\n", es)
+
+	slice = buf[10:12]
+	rs := binary.BigEndian.Uint16(slice)
+	fmt.Printf("range shift: %d\n", rs)
+
+	numTab := int(numTbl)
+
+	for i:=0; i< numTab; i++ {
+		entry := buf[(12 +i*16): ((12 +16) +i*16)]
+		tag := string(entry[:4])
+		fmt.Printf("table %3d: %s\n", i, tag)
+	}
 
 	return &fontobj, nil
 }
