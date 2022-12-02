@@ -224,10 +224,22 @@ func GetFont(fontNam string)(font *fontObj, err error) {
 
 	numTab := int(numTbl)
 
+	fmt.Println("tbl  tag   checksum   offset  length")
+
 	for i:=0; i< numTab; i++ {
 		entry := buf[(12 +i*16): ((12 +16) +i*16)]
 		tag := string(entry[:4])
-		fmt.Printf("table %3d: %s\n", i, tag)
+
+		slice = entry[4:8]
+		checksum := binary.BigEndian.Uint32(slice)
+
+		slice = entry[8:12]
+		offset := binary.BigEndian.Uint32(slice)
+
+		slice = entry[12:16]
+		length := binary.BigEndian.Uint32(slice)
+
+		fmt.Printf("%3d: %4s %10d %7d %7d\n", i, tag, checksum, offset, length)
 	}
 
 	return &fontobj, nil
