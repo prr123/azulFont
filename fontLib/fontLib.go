@@ -195,20 +195,27 @@ func GetFont(fontNam string)(font *fontObj, err error) {
 	_, err = ttfFil.Read(buf)
 	if err != nil {return nil, fmt.Errorf("read: %v", err)}
 
+
+	// top 20 char for illustration
+/*
 	for i:=0; i< 20; i++ {
 		fmt.Printf("%d: %d %q|", i, buf[i], buf[i])
 	}
 	fmt.Println()
-
+*/
 	fontobj.Buf = &buf
 
+	// header
+	// see table 4
+	// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6.html
+	//
 	slice := buf[:4]
 	tver := binary.BigEndian.Uint32(slice)
 	fmt.Printf("scalar: %d\n", tver)
 
 	slice = buf[4:6]
 	numTbl := binary.BigEndian.Uint16(slice)
-	fmt.Printf("tables: %d\n", numTbl)
+	fmt.Printf("table count: %d\n", numTbl)
 
 	slice = buf[6:8]
 	sr := binary.BigEndian.Uint16(slice)
@@ -224,6 +231,9 @@ func GetFont(fontNam string)(font *fontObj, err error) {
 
 	numTab := int(numTbl)
 
+	// table directory
+	// see table 5
+	//
 	fmt.Println("tbl  tag   checksum   offset  length")
 
 	for i:=0; i< numTab; i++ {
